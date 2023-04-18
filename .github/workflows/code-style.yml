@@ -1,0 +1,22 @@
+
+name: 'Code Style'
+
+on: [ push, pull_request ]
+
+jobs:
+  code-style:
+    name: Code Style Check
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup PHP
+        uses: nanasess/setup-php@v3
+        with:
+          php-version: 8.1
+
+      - name: Check code style
+        run: |
+          make lint

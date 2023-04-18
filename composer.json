@@ -1,0 +1,29 @@
+{
+    "name": "supseven/inline-page-module",
+    "description": "Edit inline tt_content records in a page module view",
+    "type": "typo3-cms-extension",
+    "license": "GPL-3.0-only",
+    "autoload": {
+        "psr-4": {
+            "Supseven\\InlinePageModule\\": "Classes/"
+        }
+    },
+    "require": {
+        "typo3/cms-backend": ">= v10.4.0, < 11.5.999",
+        "typo3/cms-core": ">= v10.4.0, < 11.5.999"
+    },
+    "extra": {
+        "typo3/cms": {
+            "extension-key": "inline_page_module"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "typo3/class-alias-loader": false,
+            "typo3/cms-composer-installers": false
+        }
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.12"
+    }
+}
