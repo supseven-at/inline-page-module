@@ -34,33 +34,38 @@ class PageModuleSwitcher
 
             $config = $tca['config'] ?? [];
 
-            if (($config['foreign_table'] ?? '') === 'tt_content' && ($config['type'] ?? '') === 'inline') {
-                $GLOBALS['TCA'][$table]['columns'][$field]['config']['customControls']['page_module_view'] = [
-                    'userFunc'       => static::class . '->createButton',
-                    'backend_layout' => $backendLayout,
-                ];
+            if (($config['foreign_table'] ?? '') !== 'tt_content' || ($config['type'] ?? '') !== 'inline') {
+                continue;
+            }
 
-                $hiddenFields = [
-                    $GLOBALS['TCA'][$table]['columns'][$field]['config']['foreign_field'],
-                ];
+            // Register custom control to show the button
+            $GLOBALS['TCA'][$table]['columns'][$field]['config']['customControls']['page_module_view'] = [
+                'userFunc'       => static::class . '->createButton',
+                'backend_layout' => $backendLayout,
+            ];
 
-                $foreignMatches = $GLOBALS['TCA'][$table]['columns'][$field]['config']['foreign_match_fields'] ?? [];
+            // Ensure there is a TCA type definition for all "hidden" fields
+            // Otherwise DataHandler will not fill them with defined defaults in new records
+            $hiddenFields = [
+                $GLOBALS['TCA'][$table]['columns'][$field]['config']['foreign_field'],
+            ];
 
-                foreach (array_keys($foreignMatches) as $matchField) {
-                    $hiddenFields[] = $matchField;
-                }
-                $foreignTableField = $GLOBALS['TCA'][$table]['columns'][$field]['config']['foreign_table_field'] ?? '';
+            $foreignMatches = $GLOBALS['TCA'][$table]['columns'][$field]['config']['foreign_match_fields'] ?? [];
 
-                if ($foreignTableField) {
-                    $hiddenFields[] = $foreignTableField;
-                }
+            foreach (array_keys($foreignMatches) as $matchField) {
+                $hiddenFields[] = $matchField;
+            }
+            $foreignTableField = $GLOBALS['TCA'][$table]['columns'][$field]['config']['foreign_table_field'] ?? '';
 
-                foreach ($hiddenFields as $hiddenField) {
-                    if (empty($GLOBALS['TCA']['tt_content']['columns'][$hiddenField]['config'])) {
-                        $GLOBALS['TCA']['tt_content']['columns'][$hiddenField]['config'] = [
-                            'type' => 'input',
-                        ];
-                    }
+            if ($foreignTableField) {
+                $hiddenFields[] = $foreignTableField;
+            }
+
+            foreach ($hiddenFields as $hiddenField) {
+                if (empty($GLOBALS['TCA']['tt_content']['columns'][$hiddenField]['config'])) {
+                    $GLOBALS['TCA']['tt_content']['columns'][$hiddenField]['config'] = [
+                        'type' => 'input',
+                    ];
                 }
             }
         }

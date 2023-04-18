@@ -17,6 +17,10 @@ Requires TYPO3 v10.4-10.5 in composer mode.
 
 ### Default
 
+> **Important**: EXT:inline_page_module does not come with defaults, like for 
+> news. All fields that should have a page view must be defined by an 
+> integrator.
+
 To add the function to a table, use the method 
 `\Supseven\InlinePageModule\PageModuleSwitcher::register` to generate the 
 needed TCA settings in a `TCA/Overrides/table.php` file. The function needs 
@@ -32,11 +36,11 @@ the name of the table as first parameter.
 The second parameter can a be the name of PageTS-defined backend layout. The 
 page module will then use this backend layout. This is useful if the backend 
 layout should have a different column name or if the `colPos` value of the 
-tt_content records differents from the available in the default.
+tt_content records differents from the inherited layout.
 
 eg. with a PageTS like this
 
-```typoscript
+```
 mod.web_layout.BackendLayouts.News {
     title = News Elements
     config.backend_layout {
@@ -59,6 +63,10 @@ This backend layout can be used with
     'News'
 );
 ```
+
+All configurations for backend layouts remain unchanged, which includes 
+[`EXT:content_defender`](https://github.com/IchHabRecht/content_defender) 
+restrictions.
 
 > **Important**: Having referenced records from multiple fields in several 
 > "colPos"es is currently not supported. Each field has its own view.
