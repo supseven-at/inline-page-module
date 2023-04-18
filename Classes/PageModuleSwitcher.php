@@ -87,7 +87,7 @@ class PageModuleSwitcher
         if (MathUtility::canBeInterpretedAsInteger($parameters['row']['uid'] ?? '')) {
             $label = $GLOBALS['LANG']->sL('LLL:EXT:inline_page_module/Resources/Private/Language/locallang_be.xlf:btn.openInPageModule');
             $icon = GeneralUtility::makeInstance(IconFactory::class)
-                ->getIcon('apps-pagetree-page-content-from-page', Icon::SIZE_SMALL);
+                ->getIcon('actions-view-page', Icon::SIZE_SMALL);
 
             $params = [
                 'inline_table' => $parameters['table'],
