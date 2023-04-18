@@ -22,9 +22,9 @@ Requires TYPO3 v10.4-10.5 in composer mode.
 > integrator.
 
 To add the function to a table, use the method 
-`\Supseven\InlinePageModule\PageModuleSwitcher::register` to generate the 
-needed TCA settings in a `TCA/Overrides/table.php` file. The function needs 
-the name of the table as first parameter.
+`\Supseven\InlinePageModule\PageModuleSwitcher::register` in a 
+`TCA/Overrides/table.php` file to generate the needed TCA settings. The 
+function needs the name of the table as first parameter.
 
 ```php
 // Add to news table
@@ -33,10 +33,10 @@ the name of the table as first parameter.
 
 ### With a backend layout
 
-The second parameter can a be the name of PageTS-defined backend layout. The 
+The second parameter can a be the name of a backend layout. The 
 page module will then use this backend layout. This is useful if the backend 
 layout should have a different column name or if the `colPos` value of the 
-tt_content records differents from the inherited layout.
+tt_content records differs from the inherited layout.
 
 eg. with a PageTS like this
 
@@ -69,7 +69,8 @@ All configurations for backend layouts remain unchanged, which includes
 restrictions.
 
 > **Important**: Having referenced records from multiple fields in several 
-> "colPos"es is currently not supported. Each field has its own view.
+> "colPos" in the same page layout view is currently not supported. Each field 
+> has its own view.
 
 ### Restricting fields
 
@@ -101,6 +102,12 @@ tt_content records:
 In this view, all the common editing options, like drag-and-drop sorting or 
 the "new" and "delete" buttons work like in the page module.
 
+The "Go back..." button is a link to the form of the parent record.
+
+In this view, the page-module navigation point on the left of the TYPO3 
+backend is not activated. Also, the page on which the parent record is, is
+(still) the selected. 
+
 ## Legal
 
 ### License
@@ -113,9 +120,10 @@ This package is provided under the GPL v3 license. See the file
 TYPO3 is provided under the GPL license, v2 or later. See 
 <https://typo3.org/project/licenses> for details.
 
-The "News" of this document refers to [extension news](https://github.com/georgringer/news/)
-provided under the GPL v2 or later
+The "News" packaged mentioned in this document refers to 
+[extension news](https://github.com/georgringer/news/) provided under the 
+GPL v2 or later
 
 The extension icon is part of the the 
-[ionicons icon pack](https://ionic.io/ionicons) which is povided under the 
+[ionicons icon pack](https://ionic.io/ionicons) which is provided under the 
 MIT license.
