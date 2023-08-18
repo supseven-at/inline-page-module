@@ -29,11 +29,11 @@ class InlinePageLayoutController extends PageLayoutController
      *
      * Same function as parent, but adds the "inline_X" parameters to the URLs
      * so we stay in the inline view when switching the action
-     *
-     * @param array $actions
      */
-    protected function makeActionMenu(array $actions): void
+    protected function makeActionMenu(): void
     {
+        // Get actions, compatible with v10 and v11
+        $actions = func_get_args()[0] ?? $this->initActions();
         $actionMenu = $this->moduleTemplate->getDocHeaderComponent()->getMenuRegistry()->makeMenu();
         $actionMenu->setIdentifier('actionMenu');
         $actionMenu->setLabel('');
@@ -100,28 +100,19 @@ class InlinePageLayoutController extends PageLayoutController
     protected function getHeaderFlashMessagesForCurrentPid(): string
     {
         if ($this->isInlineView()) {
-            $record = $this->getRecord();
-            $params = [
-                'edit' => [
-                    $record['_table'] => [
-                        $record['uid'] => 'edit',
-                    ],
-                ],
-            ];
-            $url = (string)$this->uriBuilder->buildUriFromRoute('record_edit', $params);
-            $title = $this->getRecordTitle();
-            $type = $this->getLanguageService()->sL($GLOBALS['TCA'][$record['_table']]['ctrl']['title']);
-
-            return '<a href="' . htmlspecialchars($url)
-                . '" style="margin-bottom: 15px" class="btn btn-default btn-info">Go back to '
-                . htmlspecialchars($type)
-                . ' »'
-                . htmlspecialchars($title)
-                . '«'
-                . '</a>';
+            return $this->generateInlineHint();
         }
 
         return parent::getHeaderFlashMessagesForCurrentPid();
+    }
+
+    protected function generateMessagesForCurrentPage(): string
+    {
+        if ($this->isInlineView()) {
+            return $this->generateInlineHint();
+        }
+
+        return parent::generateMessagesForCurrentPage();
     }
 
     /**
@@ -276,14 +267,35 @@ class InlinePageLayoutController extends PageLayoutController
      */
     private function getRecordTitle(): string
     {
-        $title = '';
         $record = $this->getRecord();
-        $labelField = $GLOBALS['TCA'][$record['_table']]['ctrl']['label'] ?? '';
 
-        if ($labelField && $record && !empty($record[$labelField])) {
-            $title = (string)$record[$labelField];
-        }
+        return BackendUtility::getRecordTitle($record['_table'], $record);
+    }
 
-        return $title;
+    /**
+     * @return string
+     * @throws \TYPO3\CMS\Backend\Routing\Exception\RouteNotFoundException
+     */
+    protected function generateInlineHint(): string
+    {
+        $record = $this->getRecord();
+        $params = [
+            'edit' => [
+                $record['_table'] => [
+                    $record['uid'] => 'edit',
+                ],
+            ],
+        ];
+        $url = (string)$this->uriBuilder->buildUriFromRoute('record_edit', $params);
+        $title = $this->getRecordTitle();
+        $type = $this->getLanguageService()->sL($GLOBALS['TCA'][$record['_table']]['ctrl']['title']);
+
+        return '<a href="' . htmlspecialchars($url)
+            . '" style="margin-bottom: 15px" class="btn btn-default btn-info">Go back to '
+            . htmlspecialchars($type)
+            . ' »'
+            . htmlspecialchars($title)
+            . '«'
+            . '</a>';
     }
 }
