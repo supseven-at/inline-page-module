@@ -67,12 +67,16 @@ class PageQueryModifier
                     $qb->execute()->fetchAllAssociative()
                 );
 
-                if ($uids) {
-                    $queryBuilder->andWhere($queryBuilder->expr()->orX(
-                        $queryBuilder->expr()->in('uid', $uids),
-                        $queryBuilder->expr()->in('l18n_parent', $uids)
-                    ));
+                // If the parent has no elements yet, we restrict to an "impossible ID"
+                // to make sure no elements are shown
+                if (!$uids) {
+                    $uids = [-99];
                 }
+
+                $queryBuilder->andWhere($queryBuilder->expr()->orX(
+                    $queryBuilder->expr()->in('uid', $uids),
+                    $queryBuilder->expr()->in('l18n_parent', $uids)
+                ));
             }
         }
     }
