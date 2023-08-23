@@ -261,18 +261,6 @@ class InlinePageLayoutController extends PageLayoutController
     }
 
     /**
-     * Get the title of the parent records of the inline elements
-     *
-     * @return string
-     */
-    private function getRecordTitle(): string
-    {
-        $record = $this->getRecord();
-
-        return BackendUtility::getRecordTitle($record['_table'], $record);
-    }
-
-    /**
      * @return string
      * @throws \TYPO3\CMS\Backend\Routing\Exception\RouteNotFoundException
      */
@@ -297,5 +285,17 @@ class InlinePageLayoutController extends PageLayoutController
             . htmlspecialchars($title)
             . '«'
             . '</a>';
+    }
+
+    /**
+     * Get the title of the parent records of the inline elements
+     *
+     * @return string
+     */
+    private function getRecordTitle(): string
+    {
+        $record = $this->getRecord();
+
+        return BackendUtility::getRecordTitle($record['_table'], $record);
     }
 }
