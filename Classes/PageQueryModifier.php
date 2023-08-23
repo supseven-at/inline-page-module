@@ -40,7 +40,7 @@ class PageQueryModifier
             $contentField = $GLOBALS['TCA'][$parentTable]['columns'][$parentField]['config']['foreign_field'] ?? '';
             $parentUid = (int)($_GET['inline_uid'] ?? 0);
 
-            if (!empty($parentTable) && !empty($contentField) && !empty($parentUid)) {
+            if (!empty($parentTable) && !empty($contentField) && $parentUid > 0) {
                 $qb = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('tt_content');
                 $qb->getRestrictions()->removeByType(HiddenRestriction::class);
                 $qb->select('uid');
@@ -67,10 +67,12 @@ class PageQueryModifier
                     $qb->execute()->fetchAllAssociative()
                 );
 
-                $queryBuilder->andWhere($queryBuilder->expr()->orX(
-                    $queryBuilder->expr()->in('uid', $uids),
-                    $queryBuilder->expr()->in('l18n_parent', $uids)
-                ));
+                if ($uids) {
+                    $queryBuilder->andWhere($queryBuilder->expr()->orX(
+                        $queryBuilder->expr()->in('uid', $uids),
+                        $queryBuilder->expr()->in('l18n_parent', $uids)
+                    ));
+                }
             }
         }
     }
