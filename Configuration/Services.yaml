@@ -1,0 +1,26 @@
+
+services:
+  _defaults:
+    public: true
+    autowire: true
+    autoconfigure: true
+
+  Supseven\InlinePageModule\Listeners\PageLayoutContentModifierListener:
+    tags:
+      - name: event.listener
+        identifier: 'supseven/inline-page-module/page-layout-content-modifier'
+
+  Supseven\InlinePageModule\Listeners\PageQueryModifier:
+    tags:
+      - name: event.listener
+        identifier: 'supseven/inline-page-module/page-query-modifier'
+
+  Supseven\InlinePageModule\Listeners\NewContentElementWizardModifier:
+    tags:
+      - name: event.listener
+        identifier: 'supseven/inline-page-module/new-element-wizard-modifier'
+
+  Supseven\InlinePageModule\Listeners\ModifyButtonsListener:
+    tags:
+      - name: event.listener
+        identifier: 'supseven/inline-page-module/new-element-wizard-modifier'

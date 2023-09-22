@@ -9,8 +9,8 @@
         }
     },
     "require": {
-        "typo3/cms-backend": ">= v10.4.0, < 11.5.999",
-        "typo3/cms-core": ">= v10.4.0, < 11.5.999"
+        "typo3/cms-backend": "^12.4",
+        "typo3/cms-core": "^12.4"
     },
     "extra": {
         "typo3/cms": {

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 $EM_CONF[$_EXTKEY] = [
     'title'            => 'Inline Page Module',
     'description'      => 'Edit inline content records in a page module view',
@@ -9,10 +11,10 @@ $EM_CONF[$_EXTKEY] = [
     'author_company'   => 'supseven',
     'state'            => 'beta',
     'clearCacheOnLoad' => true,
-    'version'          => '1.0.0',
+    'version'          => '2.0.0',
     'constraints'      => [
         'depends' => [
-            'typo3' => '10.4.36-11.5.999',
+            'typo3' => '12.4.6-12.4.999',
         ],
     ],
 ];

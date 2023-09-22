@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Supseven\InlinePageModule;
+namespace Supseven\InlinePageModule\Listeners;
 
-use TYPO3\CMS\Backend\Wizard\NewContentElementWizardHookInterface;
+use TYPO3\CMS\Backend\Controller\Event\ModifyNewContentElementWizardItemsEvent;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -12,17 +12,11 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  *
  * @author Georg Großberger <g.grossberger@supseven.at>
  */
-class NewContentElementWizardModifier implements NewContentElementWizardHookInterface
+class NewContentElementWizardModifier
 {
-    /**
-     * Extend the URL of all wizard items to keep the "inline_"
-     * parameters if we are in an inline view
-     *
-     * @param array $wizardItems
-     * @param \TYPO3\CMS\Backend\Controller\ContentElement\NewContentElementController $parentObject
-     */
-    public function manipulateWizardItems(&$wizardItems, &$parentObject): void
+    public function __invoke(ModifyNewContentElementWizardItemsEvent $event): void
     {
+
         $returnUrlParts = GeneralUtility::explodeUrl2Array($_GET['returnUrl'] ?? '');
         $parentTable = $returnUrlParts['inline_table'] ?? '';
         $parentField = $returnUrlParts['inline_field'] ?? '';
@@ -39,20 +33,22 @@ class NewContentElementWizardModifier implements NewContentElementWizardHookInte
             foreach ($foreignMatches as $key => $value) {
                 $defVals[$key] = $value;
             }
+
             $foreignTableField = $GLOBALS['TCA'][$parentTable]['columns'][$parentField]['config']['foreign_table_field'] ?? '';
 
             if ($foreignTableField) {
                 $defVals[$foreignTableField] = $parentTable;
             }
 
+            $wizardItems = $event->getWizardItems();
+
             foreach ($wizardItems as &$wizard) {
-                if (isset($wizard['params'])) {
-                    foreach ($defVals as $field => $value) {
-                        $wizard['tt_content_defValues'][$field] = (string)$value;
-                        $wizard['params'] .= '&defVals[tt_content][' . $field . ']=' . rawurlencode((string)$value);
-                    }
+                foreach ($defVals as $field => $value) {
+                    $wizard['tt_content_defValues'][$field] = (string)$value;
                 }
             }
+
+            $event->setWizardItems($wizardItems);
         }
     }
 }

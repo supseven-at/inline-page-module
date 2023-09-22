@@ -6,7 +6,8 @@ use Symfony\Component\Finder\Finder;
 
 $finder = Finder::create()
     ->name('/\\.php$/')
-    ->in(__DIR__ . '/Classes');
+    ->in(__DIR__)
+    ->notPath('vendor');
 
 return (new PhpCsFixer\Config())
     ->setUsingCache(false)

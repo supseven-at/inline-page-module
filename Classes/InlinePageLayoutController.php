@@ -6,8 +6,10 @@ namespace Supseven\InlinePageModule;
 
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Controller\PageLayoutController;
+use TYPO3\CMS\Backend\Template\ModuleTemplate;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Domain\Repository\PageRepository;
+use TYPO3\CMS\Fluid\ViewHelpers\Be\InfoboxViewHelper;
 
 /**
  * Overload the PageLayoutController to adjust the view for inline needs
@@ -29,17 +31,11 @@ class InlinePageLayoutController extends PageLayoutController
      *
      * Same function as parent, but adds the "inline_X" parameters to the URLs
      * so we stay in the inline view when switching the action
+     * @param ModuleTemplate $view
+     * @param array $tsConfig
      */
-    protected function makeActionMenu(): void
+    protected function makeActionMenu(ModuleTemplate $view, array $tsConfig): void
     {
-        // Get actions, compatible with v10 and v11
-        $actions = func_get_args()[0] ?? $this->initActions();
-        $actionMenu = $this->moduleTemplate->getDocHeaderComponent()->getMenuRegistry()->makeMenu();
-        $actionMenu->setIdentifier('actionMenu');
-        $actionMenu->setLabel('');
-
-        $defaultKey = null;
-        $foundDefaultKey = false;
         $defaultParams = [];
 
         if ($this->isInlineView()) {
@@ -50,33 +46,52 @@ class InlinePageLayoutController extends PageLayoutController
             ];
         }
 
+        $languageService = $this->getLanguageService();
+        $actions = [
+            1 => $languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.view.layout'),
+        ];
+
+        // Find if there are ANY languages at all (and if not, do not show the language option from function menu).
+        // The second check is for an edge case: Only two languages in the site and the default is not allowed.
+        if (count($this->availableLanguages) > 1 || (int)array_key_first($this->availableLanguages) > 0) {
+            $actions[2] = $languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.view.language_comparison');
+        }
+        // Page / user TSconfig blinding of menu-items
+        $blindActions = $tsConfig['mod.']['web_layout.']['menu.']['functions.'] ?? [];
+        foreach ($blindActions as $key => $value) {
+            if (!$value && array_key_exists($key, $actions)) {
+                unset($actions[$key]);
+            }
+        }
+
+        $actionMenu = $view->getDocHeaderComponent()->getMenuRegistry()->makeMenu();
+        $actionMenu->setIdentifier('actionMenu');
+        $actionMenu->setLabel('');
+        $defaultKey = null;
+        $foundDefaultKey = false;
         foreach ($actions as $key => $action) {
-            $params = $defaultParams;
-            $params['id'] = $this->id;
-            $params['SET'] = ['function' => $key];
+            $params = $defaultParams + ['id' => $this->id, 'function' => $key];
             $menuItem = $actionMenu
                 ->makeMenuItem()
                 ->setTitle($action)
-                ->setHref((string)$this->uriBuilder->buildUriFromRoute($this->moduleName, $params));
+                ->setHref((string)$this->uriBuilder->buildUriFromRoute('web_layout', $params));
 
             if (!$foundDefaultKey) {
                 $defaultKey = $key;
                 $foundDefaultKey = true;
             }
 
-            if ((int)$this->MOD_SETTINGS['function'] === $key) {
+            if ((int)$this->moduleData->get('function') === $key) {
                 $menuItem->setActive(true);
                 $defaultKey = null;
             }
-
             $actionMenu->addMenuItem($menuItem);
         }
 
         if (isset($defaultKey)) {
-            $this->MOD_SETTINGS['function'] = $defaultKey;
+            $this->moduleData->set('function', $defaultKey);
         }
-
-        $this->moduleTemplate->getDocHeaderComponent()->getMenuRegistry()->addMenu($actionMenu);
+        $view->getDocHeaderComponent()->getMenuRegistry()->addMenu($actionMenu);
     }
 
     /**
@@ -92,41 +107,29 @@ class InlinePageLayoutController extends PageLayoutController
         return parent::isPageEditable($languageId) && !$this->isInlineView();
     }
 
-    /**
-     * Add a back-button to the flash messages area
-     *
-     * @return string
-     */
-    protected function getHeaderFlashMessagesForCurrentPid(): string
+    protected function generateMessagesForCurrentPage(ServerRequestInterface $request): array
     {
         if ($this->isInlineView()) {
             return $this->generateInlineHint();
         }
 
-        return parent::getHeaderFlashMessagesForCurrentPid();
-    }
-
-    protected function generateMessagesForCurrentPage(): string
-    {
-        if ($this->isInlineView()) {
-            return $this->generateInlineHint();
-        }
-
-        return parent::generateMessagesForCurrentPage();
+        return parent::generateMessagesForCurrentPage($request);
     }
 
     /**
      * Use the title of the parent record as page title
      *
+     * @param int $currentSelectedLanguage
+     * @param array $pageInfo
      * @return string
      */
-    protected function getLocalizedPageTitle(): string
+    protected function getLocalizedPageTitle(int $currentSelectedLanguage, array $pageInfo): string
     {
         if ($this->isInlineView()) {
             return $this->getRecordTitle();
         }
 
-        return parent::getLocalizedPageTitle();
+        return parent::getLocalizedPageTitle($currentSelectedLanguage, $pageInfo);
     }
 
     /**
@@ -145,73 +148,6 @@ class InlinePageLayoutController extends PageLayoutController
             $this->modTSconfig['properties']['disableSearchBox'] = true;
             $this->modTSconfig['properties']['disableAdvanced'] = true;
         }
-    }
-
-    /**
-     * Build custom language menu
-     *
-     * This is the same function as in the parent with some additional
-     * parameters to keep in the inline view when switching languages
-     */
-    protected function makeLanguageMenu(): void
-    {
-        if (!$this->isInlineView()) {
-            parent::makeLanguageMenu();
-
-            return;
-        }
-
-        if (count($this->MOD_MENU['language']) > 1) {
-            $languageMenu = $this->moduleTemplate->getDocHeaderComponent()->getMenuRegistry()->makeMenu();
-            $languageMenu->setIdentifier('languageMenu');
-            $defaultParams = [
-                'id'  => $this->id,
-                'SET' => [
-                    'language' => 0,
-                ],
-                'inline_table' => $_GET['inline_table'],
-                'inline_field' => $_GET['inline_field'],
-                'inline_uid'   => $_GET['inline_uid'],
-            ];
-
-            foreach ($this->MOD_MENU['language'] as $key => $language) {
-                $params = $defaultParams;
-                $params['SET']['language'] = $key;
-
-                $menuItem = $languageMenu
-                    ->makeMenuItem()
-                    ->setTitle($language)
-                    ->setHref((string)$this->uriBuilder->buildUriFromRoute($this->moduleName, $params));
-
-                if ((int)$this->current_sys_language === $key) {
-                    $menuItem->setActive(true);
-                }
-
-                $languageMenu->addMenuItem($menuItem);
-            }
-
-            $this->moduleTemplate->getDocHeaderComponent()->getMenuRegistry()->addMenu($languageMenu);
-        }
-    }
-
-    /**
-     * Call the parent::main function and add some additional content
-     *
-     * @param ServerRequestInterface $request
-     */
-    protected function main(ServerRequestInterface $request): void
-    {
-        parent::main($request);
-
-        // Remove the "edit this column" buttons via JS
-        // because the function is not compatible with an inline view
-        $this->moduleTemplate->addJavaScriptCode('inline_page_module', '
-        window.addEventListener("DOMContentLoaded", () => {
-            document.querySelectorAll(".t3-page-column-header .t3-page-column-header-icons").forEach(el => {
-                el.parentNode.removeChild(el);
-            });
-        });
-        ');
     }
 
     /**
@@ -261,10 +197,10 @@ class InlinePageLayoutController extends PageLayoutController
     }
 
     /**
-     * @return string
+     * @return array
      * @throws \TYPO3\CMS\Backend\Routing\Exception\RouteNotFoundException
      */
-    protected function generateInlineHint(): string
+    protected function generateInlineHint(): array
     {
         $record = $this->getRecord();
         $params = [
@@ -274,17 +210,24 @@ class InlinePageLayoutController extends PageLayoutController
                 ],
             ],
         ];
+
         $url = (string)$this->uriBuilder->buildUriFromRoute('record_edit', $params);
         $title = $this->getRecordTitle();
         $type = $this->getLanguageService()->sL($GLOBALS['TCA'][$record['_table']]['ctrl']['title']);
+        $label = $this->getLanguageService()->sL('LLL:EXT:inline_page_module/Resources/Private/Language/locallang_be.xlf:btn.back');
 
-        return '<a href="' . htmlspecialchars($url)
-            . '" style="margin-bottom: 15px" class="btn btn-default btn-info">Go back to '
-            . htmlspecialchars($type)
-            . ' »'
-            . htmlspecialchars($title)
-            . '«'
+        $message = '<a href="'
+            . htmlspecialchars($url)
+            . '" style="margin-bottom: 15px" class="btn btn-notice">'
+            . sprintf($label, htmlspecialchars($type), htmlspecialchars($title))
             . '</a>';
+
+        return [
+            [
+                'message' => $message,
+                'state'   => InfoboxViewHelper::STATE_NOTICE,
+            ],
+        ];
     }
 
     /**

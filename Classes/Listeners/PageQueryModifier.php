@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Supseven\InlinePageModule;
+namespace Supseven\InlinePageModule\Listeners;
 
+use TYPO3\CMS\Backend\Search\Event\ModifyQueryForLiveSearchEvent;
 use TYPO3\CMS\Core\Database\ConnectionPool;
-use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 use TYPO3\CMS\Core\Database\Query\Restriction\HiddenRestriction;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -16,24 +16,11 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 class PageQueryModifier
 {
-    /**
-     * Limit the tt_content records to those referenced in the parent record
-     *
-     * @param $parameters
-     * @param $table
-     * @param $pageId
-     * @param $additionalConstraints
-     * @param $fieldList
-     * @param QueryBuilder $queryBuilder
-     */
-    public function modifyQuery(
-        $parameters,
-        $table,
-        $pageId,
-        $additionalConstraints,
-        $fieldList,
-        QueryBuilder $queryBuilder
-    ): void {
+    public function __invoke(ModifyQueryForLiveSearchEvent $event): void
+    {
+        $table = $event->getTableName();
+        $pageId = (int)($_GET['id'] ?? 0);
+
         if ($table === 'tt_content' && $pageId > 0) {
             $parentTable = $_GET['inline_table'] ?? '';
             $parentField = $_GET['inline_field'] ?? '';
@@ -73,9 +60,9 @@ class PageQueryModifier
                     $uids = [-99];
                 }
 
-                $queryBuilder->andWhere($queryBuilder->expr()->orX(
-                    $queryBuilder->expr()->in('uid', $uids),
-                    $queryBuilder->expr()->in('l18n_parent', $uids)
+                $event->getQueryBuilder()->andWhere($event->getQueryBuilder()->expr()->orX(
+                    $event->getQueryBuilder()->expr()->in('uid', $uids),
+                    $event->getQueryBuilder()->expr()->in('l18n_parent', $uids)
                 ));
             }
         }
