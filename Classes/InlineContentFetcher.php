@@ -32,7 +32,7 @@ class InlineContentFetcher extends ContentFetcher
             BackendUtility::workspaceOL('tt_content', $row, -99, true);
 
             if ($row && !VersionState::cast($row['t3ver_state'] ?? 0)->equals(VersionState::DELETE_PLACEHOLDER)) {
-                if ($this->usedIds && in_array($row['uid'], $this->usedIds)) {
+                if ($this->usedIds && (in_array($row['uid'], $this->usedIds) || in_array($row['l18n_parent'], $this->usedIds))) {
                     $output[] = $row;
                 }
             }

@@ -6,9 +6,15 @@ namespace Supseven\InlinePageModule;
 
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Controller\PageLayoutController;
+use TYPO3\CMS\Backend\Template\Components\ButtonBar;
+use TYPO3\CMS\Backend\Template\Components\Buttons\ButtonInterface;
+use TYPO3\CMS\Backend\Template\Components\Buttons\DropDown\DropDownItemInterface;
+use TYPO3\CMS\Backend\Template\Components\Buttons\DropDown\DropDownRadio;
 use TYPO3\CMS\Backend\Template\ModuleTemplate;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Domain\Repository\PageRepository;
+use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Fluid\ViewHelpers\Be\InfoboxViewHelper;
 
 /**
@@ -94,6 +100,60 @@ class InlinePageLayoutController extends PageLayoutController
         $view->getDocHeaderComponent()->getMenuRegistry()->addMenu($actionMenu);
     }
 
+    protected function makeLanguageSwitchButton(ButtonBar $buttonbar): ?ButtonInterface
+    {
+        $languageDropDownButton = parent::makeLanguageSwitchButton($buttonbar);
+
+        if ($languageDropDownButton && $this->isInlineView()) {
+            $languageService = $this->getLanguageService();
+            $defaultParams = [
+                'inline_table' => $_GET['inline_table'],
+                'inline_field' => $_GET['inline_field'],
+                'inline_uid'   => $_GET['inline_uid'],
+            ];
+
+            $languageDropDownButton = $buttonbar->makeDropDownButton()
+                ->setLabel($languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.language'))
+                ->setShowLabelText(true);
+
+            foreach ($this->MOD_MENU['language'] as $key => $language) {
+                $siteLanguage = $this->availableLanguages[$key] ?? null;
+
+                if (!$siteLanguage instanceof SiteLanguage) {
+                    // Skip invalid language keys, e.g. "-1" for "all languages"
+                    continue;
+                }
+                /** @var DropDownItemInterface $languageItem */
+                $languageItem = GeneralUtility::makeInstance(DropDownRadio::class)
+                    ->setActive($this->currentSelectedLanguage === $siteLanguage->getLanguageId())
+                    ->setIcon($this->iconFactory->getIcon($siteLanguage->getFlagIdentifier()))
+                    ->setHref((string)$this->uriBuilder->buildUriFromRoute('web_layout', [
+                        'id'       => $this->id,
+                        'function' => (int)$this->moduleData->get('function'),
+                        'language' => $siteLanguage->getLanguageId(),
+                    ] + $defaultParams))
+                    ->setLabel($siteLanguage->getTitle());
+                $languageDropDownButton->addItem($languageItem);
+            }
+
+            if ((int)$this->moduleData->get('function') !== 1) {
+                /** @var DropDownItemInterface $allLanguagesItem */
+                $allLanguagesItem = GeneralUtility::makeInstance(DropDownRadio::class)
+                    ->setActive($this->currentSelectedLanguage === -1)
+                    ->setIcon($this->iconFactory->getIcon('flags-multiple'))
+                    ->setHref((string)$this->uriBuilder->buildUriFromRoute('web_layout', [
+                        'id'       => $this->id,
+                        'function' => (int)$this->moduleData->get('function'),
+                        'language' => -1,
+                    ] + $defaultParams))
+                    ->setLabel($languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:multipleLanguages'));
+                $languageDropDownButton->addItem($allLanguagesItem);
+            }
+        }
+
+        return $languageDropDownButton;
+    }
+
     /**
      * Ensure isPageEditable is false in inline view
      *
@@ -130,24 +190,6 @@ class InlinePageLayoutController extends PageLayoutController
         }
 
         return parent::getLocalizedPageTitle($currentSelectedLanguage, $pageInfo);
-    }
-
-    /**
-     * Build menu config and hard-code some settings
-     *
-     * This ensures to disable some buttons that have an undesired effect
-     * in the context of an inline view
-     *
-     * @param ServerRequestInterface $request
-     */
-    protected function menuConfig(ServerRequestInterface $request): void
-    {
-        parent::menuConfig($request);
-
-        if ($this->isInlineView()) {
-            $this->modTSconfig['properties']['disableSearchBox'] = true;
-            $this->modTSconfig['properties']['disableAdvanced'] = true;
-        }
     }
 
     /**
