@@ -10,11 +10,6 @@ services:
       - name: event.listener
         identifier: 'supseven/inline-page-module/page-layout-content-modifier'
 
-  Supseven\InlinePageModule\Listeners\PageQueryModifier:
-    tags:
-      - name: event.listener
-        identifier: 'supseven/inline-page-module/page-query-modifier'
-
   Supseven\InlinePageModule\Listeners\NewContentElementWizardModifier:
     tags:
       - name: event.listener
