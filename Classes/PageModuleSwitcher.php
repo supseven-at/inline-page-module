@@ -89,12 +89,32 @@ class PageModuleSwitcher
             $icon = GeneralUtility::makeInstance(IconFactory::class)
                 ->getIcon('actions-view-page', Icon::SIZE_SMALL);
 
+            $uid = $parameters['row']['uid'];
+            $lang = null;
+
+            // If the record is a translation, link the original but add the
+            // "switch function" to display the current language
+            if (!empty($GLOBALS['TCA'][$parameters['table']]['ctrl']['languageField'])) {
+                $lang = (int)($parameters['row'][$GLOBALS['TCA'][$parameters['table']]['ctrl']['languageField']]);
+
+                if (!empty($GLOBALS['TCA'][$parameters['table']]['ctrl']['transOrigPointerField'])
+                    && !empty($parameters['row'][$GLOBALS['TCA'][$parameters['table']]['ctrl']['transOrigPointerField']])) {
+                    $parentRow = $parameters['row'][$GLOBALS['TCA'][$parameters['table']]['ctrl']['transOrigPointerField']];
+                    $uid = array_shift($parentRow)['uid'];
+                }
+            }
+
             $params = [
                 'inline_table' => $parameters['table'],
                 'inline_field' => $parameters['field'],
-                'inline_uid'   => $parameters['row']['uid'],
+                'inline_uid'   => $uid,
                 'id'           => $parameters['row']['pid'],
             ];
+
+            if ($lang !== null) {
+                $params['function'] = 1;
+                $params['language'] = $lang;
+            }
 
             $uri = (string)GeneralUtility::makeInstance(UriBuilder::class)->buildUriFromRoute('web_layout', $params);
             $html = '<a class="btn btn-default" style="margin-top:15px" href="' . htmlspecialchars($uri) . '">' . $icon . ' ' . $label . '</a>';
