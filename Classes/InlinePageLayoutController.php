@@ -260,7 +260,7 @@ class InlinePageLayoutController extends PageLayoutController
 
         $message = '<a href="'
             . htmlspecialchars($url)
-            . '" style="margin-bottom: 15px" class="btn btn-notice">'
+            . '" class="btn btn-notice">'
             . sprintf($label, htmlspecialchars($type), htmlspecialchars($title))
             . '</a>';
 

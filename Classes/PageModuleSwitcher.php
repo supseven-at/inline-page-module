@@ -117,7 +117,7 @@ class PageModuleSwitcher
             }
 
             $uri = (string)GeneralUtility::makeInstance(UriBuilder::class)->buildUriFromRoute('web_layout', $params);
-            $html = '<a class="btn btn-default" style="margin-top:15px" href="' . htmlspecialchars($uri) . '">' . $icon . ' ' . $label . '</a>';
+            $html = '<a class="btn btn-default mt-3" href="' . htmlspecialchars($uri) . '">' . $icon . ' ' . $label . '</a>';
         }
 
         return $html;
