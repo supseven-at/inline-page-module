@@ -6,6 +6,7 @@ namespace Supseven\InlinePageModule;
 
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Backend\View\BackendLayout\ContentFetcher;
+use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Restriction\HiddenRestriction;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -19,6 +20,8 @@ use TYPO3\CMS\Core\Versioning\VersionState;
 class InlineContentFetcher extends ContentFetcher
 {
     private ?array $usedIds = null;
+
+    private array $impossibleCeId = [-99];
 
     protected function getResult($result): array
     {
@@ -83,8 +86,18 @@ class InlineContentFetcher extends ContentFetcher
                     // If the parent has no elements yet, we restrict to an "impossible ID"
                     // to make sure no elements are shown
                     if (!$result) {
-                        $result = [-99];
+                        $result = $this->impossibleCeId;
                     }
+                }
+            } else {
+                // If the content elements are not restricted by a specific parent element (above condition)
+                // and the extension configuration is set to list no content elements at all,
+                // we restrict to an "impossible ID", too
+                $listAllContentElements = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(ExtensionConfiguration::class)
+                                                                                ->get('inline_page_module', 'listAllContentElements');
+
+                if ($listAllContentElements !== '1') {
+                    $result = $this->impossibleCeId;
                 }
             }
         }

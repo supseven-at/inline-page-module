@@ -1,0 +1,2 @@
+# cat=basic; type=boolean; label=LLL:EXT:inline_page_module/Resources/Private/Language/locallang_be.xlf:ext_conf_template.list_all_elements
+listAllContentElements = 0
