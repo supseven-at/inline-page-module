@@ -9,6 +9,8 @@ use TYPO3\CMS\Backend\View\BackendLayout\ContentFetcher;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Restriction\HiddenRestriction;
+use TYPO3\CMS\Core\Domain\Page;
+use TYPO3\CMS\Core\Domain\Repository\PageRepository;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Versioning\VersionState;
 
@@ -89,10 +91,10 @@ class InlineContentFetcher extends ContentFetcher
                         $result = $this->impossibleCeId;
                     }
                 }
-            } else {
+            } elseif ($this->context->getPageRecord()['doktype'] === PageRepository::DOKTYPE_SYSFOLDER) {
                 // If the content elements are not restricted by a specific parent element (above condition)
                 // and the extension configuration is set to list no content elements at all,
-                // we restrict to an "impossible ID", too
+                // we restrict to an "impossible ID", too. But only if the current page is a sysfolder.
                 $listAllContentElements = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(ExtensionConfiguration::class)
                                                                                 ->get('inline_page_module', 'listAllContentElements');
 
