@@ -11,8 +11,6 @@ Use composer to add the package as a dependency
 composer require supseven/inline-page-module
 ```
 
-Version v2.x requires TYPO3 v12.4 in composer mode. Version v1.x supports older TYPO3 versions v10.4-11.5 but is not under regular maintenance anymore.
-
 ## Configuration
 
 ### Default
