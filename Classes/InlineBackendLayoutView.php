@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace Supseven\InlinePageModule;
 
+use Psr\Http\Message\ServerRequestInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use TYPO3\CMS\Backend\View\BackendLayout\BackendLayout;
+use TYPO3\CMS\Backend\View\BackendLayout\DataProviderCollection;
 use TYPO3\CMS\Backend\View\BackendLayoutView;
+use TYPO3\CMS\Core\Page\PageLayoutResolver;
+use TYPO3\CMS\Core\TypoScript\TypoScriptStringFactory;
 
 /**
  * Extends the BackendLayoutView to provide custom
@@ -16,6 +21,19 @@ use TYPO3\CMS\Backend\View\BackendLayoutView;
 class InlineBackendLayoutView extends BackendLayoutView
 {
     /**
+     * Create this object and initialize data providers.
+     */
+    public function __construct(
+        protected readonly DataProviderCollection $dataProviderCollection,
+        protected readonly TypoScriptStringFactory $typoScriptStringFactory,
+        protected readonly PageLayoutResolver $pageLayoutResolver,
+        #[Autowire(service: 'typo3.request')]
+        protected readonly ServerRequestInterface $request,
+    ) {
+        parent::__construct($this->dataProviderCollection, $this->typoScriptStringFactory, $this->pageLayoutResolver);
+    }
+
+    /**
      * Try backend layout overrides for page inline module
      *
      * Fall back to core logic if not available for setup or current view
@@ -25,8 +43,9 @@ class InlineBackendLayoutView extends BackendLayoutView
      */
     public function getBackendLayoutForPage(int $pageId): ?BackendLayout
     {
-        $table = $_GET['inline_table'] ?? '';
-        $field = $_GET['inline_field'] ?? '';
+        $params = $this->request->getQueryParams();
+        $table = $params['inline_table'] ?? '';
+        $field = $params['inline_field'] ?? '';
 
         // Only try if parameters and configuration settings exist
         if ($table && $field) {
@@ -35,8 +54,8 @@ class InlineBackendLayoutView extends BackendLayoutView
             if ($layoutKey) {
                 // If a configuration exists, find a "pagets__" layout or fall back to default
                 $backendLayout =
-                    $this->getDataProviderCollection()->getBackendLayout('pagets__' . $layoutKey, $pageId) ??
-                    $this->getDataProviderCollection()->getBackendLayout($layoutKey, $pageId);
+                    $this->dataProviderCollection->getBackendLayout('pagets__' . $layoutKey, $pageId) ??
+                    $this->dataProviderCollection->getBackendLayout($layoutKey, $pageId);
 
                 if ($backendLayout) {
                     return $backendLayout;

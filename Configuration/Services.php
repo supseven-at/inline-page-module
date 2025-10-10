@@ -9,6 +9,7 @@ use Supseven\InlinePageModule\DependencyFactory;
 use Supseven\InlinePageModule\InlineBackendLayoutView;
 use Supseven\InlinePageModule\InlinePageLayoutController;
 use Supseven\InlinePageModule\Listeners\PageLayoutContentModifierListener;
+use Supseven\InlinePageModule\PageModuleSwitcher;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use TYPO3\CMS\Backend\Controller\PageLayoutController;
 use TYPO3\CMS\Backend\View\BackendLayoutView;

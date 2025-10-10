@@ -4,15 +4,25 @@ declare(strict_types=1);
 
 namespace Supseven\InlinePageModule;
 
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use TYPO3\CMS\Backend\Controller\PageLayoutController;
+use TYPO3\CMS\Backend\Module\ModuleProvider;
+use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Template\Components\ButtonBar;
 use TYPO3\CMS\Backend\Template\Components\Buttons\ButtonInterface;
 use TYPO3\CMS\Backend\Template\Components\Buttons\DropDown\DropDownItemInterface;
 use TYPO3\CMS\Backend\Template\Components\Buttons\DropDown\DropDownRadio;
 use TYPO3\CMS\Backend\Template\ModuleTemplate;
+use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
+use TYPO3\CMS\Backend\View\BackendLayoutView;
+use TYPO3\CMS\Backend\View\Drawing\BackendLayoutRenderer;
 use TYPO3\CMS\Core\Domain\Repository\PageRepository;
+use TYPO3\CMS\Core\Imaging\IconFactory;
+use TYPO3\CMS\Core\Page\PageRenderer;
+use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Fluid\ViewHelpers\Be\InfoboxViewHelper;
@@ -32,6 +42,22 @@ class InlinePageLayoutController extends PageLayoutController
      */
     protected ?array $record = null;
 
+    public function __construct(
+        protected readonly IconFactory $iconFactory,
+        protected readonly PageRenderer $pageRenderer,
+        protected readonly UriBuilder $uriBuilder,
+        protected readonly PageRepository $pageRepository,
+        protected readonly ModuleTemplateFactory $moduleTemplateFactory,
+        protected readonly EventDispatcherInterface $eventDispatcher,
+        protected readonly ModuleProvider $moduleProvider,
+        protected readonly BackendLayoutRenderer $backendLayoutRenderer,
+        protected readonly BackendLayoutView $backendLayoutView,
+        protected readonly TcaSchemaFactory $tcaSchemaFactory,
+        #[Autowire(service: 'typo3.request')]
+        protected readonly ServerRequestInterface $request,
+    ) {
+    }
+
     /**
      * Build custom action menu
      *
@@ -45,10 +71,11 @@ class InlinePageLayoutController extends PageLayoutController
         $defaultParams = [];
 
         if ($this->isInlineView()) {
+            $params = $this->request->getQueryParams();
             $defaultParams = [
-                'inline_table' => $_GET['inline_table'],
-                'inline_field' => $_GET['inline_field'],
-                'inline_uid'   => $_GET['inline_uid'],
+                'inline_table' => $params['inline_table'],
+                'inline_field' => $params['inline_field'],
+                'inline_uid'   => $params['inline_uid'],
             ];
         }
 
@@ -75,6 +102,7 @@ class InlinePageLayoutController extends PageLayoutController
         $actionMenu->setLabel('');
         $defaultKey = null;
         $foundDefaultKey = false;
+
         foreach ($actions as $key => $action) {
             $params = $defaultParams + ['id' => $this->id, 'function' => $key];
             $menuItem = $actionMenu
@@ -97,6 +125,7 @@ class InlinePageLayoutController extends PageLayoutController
         if (isset($defaultKey)) {
             $this->moduleData->set('function', $defaultKey);
         }
+
         $view->getDocHeaderComponent()->getMenuRegistry()->addMenu($actionMenu);
     }
 
@@ -106,10 +135,11 @@ class InlinePageLayoutController extends PageLayoutController
 
         if ($languageDropDownButton && $this->isInlineView()) {
             $languageService = $this->getLanguageService();
+            $params = $this->request->getQueryParams();
             $defaultParams = [
-                'inline_table' => $_GET['inline_table'],
-                'inline_field' => $_GET['inline_field'],
-                'inline_uid'   => $_GET['inline_uid'],
+                'inline_table' => $params['inline_table'],
+                'inline_field' => $params['inline_field'],
+                'inline_uid'   => $params['inline_uid'],
             ];
 
             $languageDropDownButton = $buttonbar->makeDropDownButton()

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Supseven\InlinePageModule\Listeners;
 
 use TYPO3\CMS\Backend\Controller\Event\ModifyPageLayoutContentEvent;
+use TYPO3\CMS\Core\Attribute\AsEventListener;
 use TYPO3\CMS\Core\Domain\ConsumableString;
 
 /**
@@ -12,6 +13,7 @@ use TYPO3\CMS\Core\Domain\ConsumableString;
  *
  * @author Georg Großberger <g.grossberger@supseven.at>
  */
+#[AsEventListener(identifier: 'supseven/inline-page-module/page-layout-content-modifier')]
 class PageLayoutContentModifierListener
 {
     public function __invoke(ModifyPageLayoutContentEvent $event): void
@@ -26,7 +28,7 @@ class PageLayoutContentModifierListener
         $event->addHeaderContent('
         <script' . $nonceAttr . '>
             window.addEventListener("DOMContentLoaded", () => {
-                document.querySelectorAll(".t3-page-column-header .t3-page-column-header-icons").forEach(el => {
+                document.querySelectorAll(".module-body > .typo3-messages").forEach(el => {
                     el.parentNode.removeChild(el);
                 });
             });

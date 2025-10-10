@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Supseven\InlinePageModule;
 
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
-use TYPO3\CMS\Core\Imaging\Icon;
 use TYPO3\CMS\Core\Imaging\IconFactory;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Core\Imaging\IconSize;
+use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Utility\MathUtility;
 
 /**
@@ -17,6 +18,14 @@ use TYPO3\CMS\Core\Utility\MathUtility;
  */
 class PageModuleSwitcher
 {
+    public function __construct(
+        protected readonly IconFactory $iconFactory,
+        protected readonly UriBuilder $uriBuilder,
+        #[Autowire(service: 'typo3.lang')]
+        protected readonly LanguageService $languageService,
+    ) {
+    }
+
     /**
      * Register the inline page module view for a table
      *
@@ -85,9 +94,8 @@ class PageModuleSwitcher
         $html = '';
 
         if (MathUtility::canBeInterpretedAsInteger($parameters['row']['uid'] ?? '')) {
-            $label = $GLOBALS['LANG']->sL('LLL:EXT:inline_page_module/Resources/Private/Language/locallang_be.xlf:btn.openInPageModule');
-            $icon = GeneralUtility::makeInstance(IconFactory::class)
-                ->getIcon('actions-view-page', Icon::SIZE_SMALL);
+            $label = $this->languageService->sL('LLL:EXT:inline_page_module/Resources/Private/Language/locallang_be.xlf:btn.openInPageModule');
+            $icon = $this->iconFactory->getIcon('actions-view-page', IconSize::SMALL);
 
             $uid = $parameters['row']['uid'];
             $lang = null;
@@ -116,7 +124,7 @@ class PageModuleSwitcher
                 $params['language'] = $lang;
             }
 
-            $uri = (string)GeneralUtility::makeInstance(UriBuilder::class)->buildUriFromRoute('web_layout', $params);
+            $uri = (string)$this->uriBuilder->buildUriFromRoute('web_layout', $params);
             $html = '<a class="btn btn-default mt-3" href="' . htmlspecialchars($uri) . '">' . $icon . ' ' . $label . '</a>';
         }
 
