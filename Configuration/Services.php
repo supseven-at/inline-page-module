@@ -8,8 +8,6 @@ use Psr\Http\Message\ServerRequestInterface;
 use Supseven\InlinePageModule\DependencyFactory;
 use Supseven\InlinePageModule\InlineBackendLayoutView;
 use Supseven\InlinePageModule\InlinePageLayoutController;
-use Supseven\InlinePageModule\Listeners\ModifyButtonsListener;
-use Supseven\InlinePageModule\Listeners\NewContentElementWizardModifier;
 use Supseven\InlinePageModule\Listeners\PageLayoutContentModifierListener;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use TYPO3\CMS\Backend\Controller\PageLayoutController;
@@ -19,8 +17,8 @@ return static function (ContainerConfigurator $container, ContainerBuilder $cont
     $services = $container->services();
     $services->defaults()->public()->autowire()->autoconfigure();
 
-    $services->set(ModifyButtonsListener::class);
-    $services->set(NewContentElementWizardModifier::class);
+    $services->load('Supseven\\InlinePageModule\\Listeners\\', __DIR__ . '/../Classes/Listeners/*');
+
     $services->set(PageLayoutContentModifierListener::class);
     $services->set(DependencyFactory::class);
     $services->set(InlineBackendLayoutView::class);
