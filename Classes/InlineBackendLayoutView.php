@@ -47,6 +47,19 @@ class InlineBackendLayoutView extends BackendLayoutView
         $table = $params['inline_table'] ?? '';
         $field = $params['inline_field'] ?? '';
 
+        if (!$table || !$field) {
+            $returnUrl = $params['returnUrl'] ?? '';
+
+            if ($returnUrl) {
+                parse_str($returnUrl, $returnUrlParams);
+
+                if ($returnUrlParams) {
+                    $table = $returnUrlParams['inline_table'] ?? '';
+                    $field = $returnUrlParams['inline_field'] ?? '';
+                }
+            }
+        }
+
         // Only try if parameters and configuration settings exist
         if ($table && $field) {
             $layoutKey = $GLOBALS['TCA'][$table]['columns'][$field]['config']['customControls']['page_module_view']['backend_layout'] ?? '';
