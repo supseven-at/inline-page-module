@@ -6,26 +6,28 @@ namespace Supseven\InlinePageModule;
 
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use TYPO3\CMS\Backend\Context\PageContext;
 use TYPO3\CMS\Backend\Controller\PageLayoutController;
 use TYPO3\CMS\Backend\Module\ModuleProvider;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
-use TYPO3\CMS\Backend\Template\Components\ButtonBar;
-use TYPO3\CMS\Backend\Template\Components\Buttons\ButtonInterface;
-use TYPO3\CMS\Backend\Template\Components\Buttons\DropDown\DropDownItemInterface;
-use TYPO3\CMS\Backend\Template\Components\Buttons\DropDown\DropDownRadio;
+use TYPO3\CMS\Backend\Service\PageLinkMessageProvider;
+use TYPO3\CMS\Backend\Template\Components\Buttons\LanguageSelectorBuilder;
+use TYPO3\CMS\Backend\Template\Components\ComponentFactory;
 use TYPO3\CMS\Backend\Template\ModuleTemplate;
 use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
+use TYPO3\CMS\Backend\View\BackendLayout\BackendLayout;
+use TYPO3\CMS\Backend\View\BackendLayout\DataProviderCollection;
 use TYPO3\CMS\Backend\View\BackendLayoutView;
 use TYPO3\CMS\Backend\View\Drawing\BackendLayoutRenderer;
+use TYPO3\CMS\Backend\View\Drawing\DrawingConfiguration;
+use TYPO3\CMS\Backend\View\PageLayoutContext;
+use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Domain\Repository\PageRepository;
 use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
-use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Fluid\ViewHelpers\Be\InfoboxViewHelper;
+use TYPO3\CMS\Core\Type\ContextualFeedbackSeverity;
 
 /**
  * Overload the PageLayoutController to adjust the view for inline needs
@@ -42,7 +44,14 @@ class InlinePageLayoutController extends PageLayoutController
      */
     protected ?array $record = null;
 
+    protected ServerRequestInterface $request;
+
+    protected string $inlineTable = '';
+    protected string $inlineField = '';
+    protected int $inlineUid = 0;
+
     public function __construct(
+        protected readonly ComponentFactory $componentFactory,
         protected readonly IconFactory $iconFactory,
         protected readonly PageRenderer $pageRenderer,
         protected readonly UriBuilder $uriBuilder,
@@ -53,141 +62,95 @@ class InlinePageLayoutController extends PageLayoutController
         protected readonly BackendLayoutRenderer $backendLayoutRenderer,
         protected readonly BackendLayoutView $backendLayoutView,
         protected readonly TcaSchemaFactory $tcaSchemaFactory,
-        #[Autowire(service: 'typo3.request')]
-        protected readonly ServerRequestInterface $request,
+        protected readonly ConnectionPool $connectionPool,
+        protected readonly LanguageSelectorBuilder $languageSelectorBuilder,
+        protected readonly PageLinkMessageProvider $pageLinkMessageProvider,
+        protected readonly DataProviderCollection $dataProviderCollection,
     ) {
     }
 
-    /**
-     * Build custom action menu
-     *
-     * Same function as parent, but adds the "inline_X" parameters to the URLs
-     * so we stay in the inline view when switching the action
-     * @param ModuleTemplate $view
-     * @param array $tsConfig
-     */
-    protected function makeActionMenu(ModuleTemplate $view, array $tsConfig): void
+    protected function createPageLayoutContext(ServerRequestInterface $request): PageLayoutContext
     {
-        $defaultParams = [];
+        $this->request = $request;
+        $ctx = parent::createPageLayoutContext($request);
 
-        if ($this->isInlineView()) {
-            $params = $this->request->getQueryParams();
-            $defaultParams = [
-                'inline_table' => $params['inline_table'],
-                'inline_field' => $params['inline_field'],
-                'inline_uid'   => $params['inline_uid'],
-            ];
+        if (!$this->isInlineView()) {
+            return $ctx;
         }
 
-        $languageService = $this->getLanguageService();
-        $actions = [
-            1 => $languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.view.layout'),
-        ];
+        $title = $this->getRecordTitle();
 
-        // Find if there are ANY languages at all (and if not, do not show the language option from function menu).
-        // The second check is for an edge case: Only two languages in the site and the default is not allowed.
-        if (count($this->availableLanguages) > 1 || (int)array_key_first($this->availableLanguages) > 0) {
-            $actions[2] = $languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.view.language_comparison');
+        $this->pageContext = new PageContext(
+            $this->pageContext->pageId,
+            array_replace($this->pageContext->pageRecord, compact('title')),
+            $this->pageContext->site,
+            $this->pageContext->rootLine,
+            $this->pageContext->pageTsConfig,
+            $this->pageContext->selectedLanguageIds,
+            $this->pageContext->languageInformation,
+            $this->pageContext->pagePermissions,
+        );
+
+        $layoutKey = $GLOBALS['TCA'][$this->inlineTable]['columns'][$this->inlineField]['config']['customControls']['page_module_view']['backend_layout'] ?? '';
+        $backendLayout = $ctx->getBackendLayout();
+
+        if ($layoutKey) {
+            // If a configuration exists, find a "pagets__" layout or fall back to default
+            $pageId = $this->pageContext->pageId;
+            $backendLayout =
+                $this->dataProviderCollection->getBackendLayout('pagets__' . $layoutKey, $pageId) ??
+                $this->dataProviderCollection->getBackendLayout($layoutKey, $pageId) ??
+                $backendLayout;
         }
-        // Page / user TSconfig blinding of menu-items
-        $blindActions = $tsConfig['mod.']['web_layout.']['menu.']['functions.'] ?? [];
-        foreach ($blindActions as $key => $value) {
-            if (!$value && array_key_exists($key, $actions)) {
-                unset($actions[$key]);
+
+        return new class (
+            $this->pageContext,
+            $backendLayout,
+            $ctx->getDrawingConfiguration(),
+            $request,
+            $title,
+        ) extends PageLayoutContext {
+            public function __construct(
+                PageContext $pageContext,
+                BackendLayout $backendLayout,
+                DrawingConfiguration $drawingConfiguration,
+                ServerRequestInterface $request,
+                protected string $title,
+            ) {
+                parent::__construct(
+                    $pageContext,
+                    $backendLayout,
+                    $drawingConfiguration,
+                    $request,
+                );
             }
-        }
 
-        $actionMenu = $view->getDocHeaderComponent()->getMenuRegistry()->makeMenu();
-        $actionMenu->setIdentifier('actionMenu');
-        $actionMenu->setLabel('');
-        $defaultKey = null;
-        $foundDefaultKey = false;
-
-        foreach ($actions as $key => $action) {
-            $params = $defaultParams + ['id' => $this->id, 'function' => $key];
-            $menuItem = $actionMenu
-                ->makeMenuItem()
-                ->setTitle($action)
-                ->setHref((string)$this->uriBuilder->buildUriFromRoute('web_layout', $params));
-
-            if (!$foundDefaultKey) {
-                $defaultKey = $key;
-                $foundDefaultKey = true;
+            public function getLocalizedPageTitle(): string
+            {
+                return $this->title;
             }
-
-            if ((int)$this->moduleData->get('function') === $key) {
-                $menuItem->setActive(true);
-                $defaultKey = null;
-            }
-            $actionMenu->addMenuItem($menuItem);
-        }
-
-        if (isset($defaultKey)) {
-            $this->moduleData->set('function', $defaultKey);
-        }
-
-        $view->getDocHeaderComponent()->getMenuRegistry()->addMenu($actionMenu);
+        };
     }
 
-    protected function makeLanguageSwitchButton(ButtonBar $buttonbar): ?ButtonInterface
+    protected function addButtonsToButtonBar(ModuleTemplate $view, ServerRequestInterface $request): void
     {
-        $languageDropDownButton = parent::makeLanguageSwitchButton($buttonbar);
+        if (!$this->isInlineView()) {
+            parent::addButtonsToButtonBar($view, $request);
 
-        if ($languageDropDownButton && $this->isInlineView()) {
-            $languageService = $this->getLanguageService();
-            $params = $this->request->getQueryParams();
-            $defaultParams = [
-                'inline_table' => $params['inline_table'],
-                'inline_field' => $params['inline_field'],
-                'inline_uid'   => $params['inline_uid'],
-            ];
-
-            $languageDropDownButton = $buttonbar->makeDropDownButton()
-                ->setLabel($languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.language'))
-                ->setShowLabelText(true);
-
-            foreach ($this->MOD_MENU['language'] as $key => $language) {
-                $siteLanguage = $this->availableLanguages[$key] ?? null;
-
-                if (!$siteLanguage instanceof SiteLanguage) {
-                    // Skip invalid language keys, e.g. "-1" for "all languages"
-                    continue;
-                }
-                /** @var DropDownItemInterface $languageItem */
-                $languageItem = GeneralUtility::makeInstance(DropDownRadio::class)
-                    ->setActive($this->currentSelectedLanguage === $siteLanguage->getLanguageId())
-                    ->setIcon($this->iconFactory->getIcon($siteLanguage->getFlagIdentifier()))
-                    ->setHref((string)$this->uriBuilder->buildUriFromRoute('web_layout', [
-                        'id'       => $this->id,
-                        'function' => (int)$this->moduleData->get('function'),
-                        'language' => $siteLanguage->getLanguageId(),
-                    ] + $defaultParams))
-                    ->setLabel($siteLanguage->getTitle());
-                $languageDropDownButton->addItem($languageItem);
-            }
-
-            if ((int)$this->moduleData->get('function') !== 1) {
-                /** @var DropDownItemInterface $allLanguagesItem */
-                $allLanguagesItem = GeneralUtility::makeInstance(DropDownRadio::class)
-                    ->setActive($this->currentSelectedLanguage === -1)
-                    ->setIcon($this->iconFactory->getIcon('flags-multiple'))
-                    ->setHref((string)$this->uriBuilder->buildUriFromRoute('web_layout', [
-                        'id'       => $this->id,
-                        'function' => (int)$this->moduleData->get('function'),
-                        'language' => -1,
-                    ] + $defaultParams))
-                    ->setLabel($languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:multipleLanguages'));
-                $languageDropDownButton->addItem($allLanguagesItem);
-            }
+            return;
         }
 
-        return $languageDropDownButton;
+        $view->getDocHeaderComponent()->disableAutomaticReloadButton();
+        $view->getDocHeaderComponent()->disableAutomaticShortcutButton();
+
+        // Language selector
+        $this->createLanguageSelector($view);
     }
 
     /**
      * Ensure isPageEditable is false in inline view
      *
-     * Otherwise the "Edit page" button would open the SysFolder the parent record is in
+     * Otherwise, the "Edit page" button would open the SysFolder the parent record is in
      *
      * @param int $languageId
      * @return bool
@@ -199,27 +162,18 @@ class InlinePageLayoutController extends PageLayoutController
 
     protected function generateMessagesForCurrentPage(ServerRequestInterface $request): array
     {
+        $messages = parent::generateMessagesForCurrentPage($request);
+
         if ($this->isInlineView()) {
-            return $this->generateInlineHint();
+            $messages = array_filter(
+                $messages,
+                static fn (array $msg) => ($msg['state'] !== ContextualFeedbackSeverity::INFO),
+            );
+
+            array_unshift($messages, $this->generateInlineHint());
         }
 
-        return parent::generateMessagesForCurrentPage($request);
-    }
-
-    /**
-     * Use the title of the parent record as page title
-     *
-     * @param int $currentSelectedLanguage
-     * @param array $pageInfo
-     * @return string
-     */
-    protected function getLocalizedPageTitle(int $currentSelectedLanguage, array $pageInfo): string
-    {
-        if ($this->isInlineView()) {
-            return $this->getRecordTitle();
-        }
-
-        return parent::getLocalizedPageTitle($currentSelectedLanguage, $pageInfo);
+        return $messages;
     }
 
     /**
@@ -240,7 +194,7 @@ class InlinePageLayoutController extends PageLayoutController
      */
     protected function isInlineView(): bool
     {
-        return (int)($this->pageinfo['doktype'] ?? 0) === PageRepository::DOKTYPE_SYSFOLDER && !empty($this->getRecord());
+        return (int)($this->pageContext->pageRecord['doktype'] ?? 0) === PageRepository::DOKTYPE_SYSFOLDER && !empty($this->getRecord());
     }
 
     /**
@@ -252,15 +206,19 @@ class InlinePageLayoutController extends PageLayoutController
     {
         if (!is_array($this->record)) {
             $this->record = [];
-            $table = $_GET['inline_table'] ?? '';
-            $uid = $_GET['inline_uid'] ?? 0;
+            $params = $this->request->getQueryParams();
+            $table = $params['inline_table'] ?? '';
+            $field = $params['inline_field'] ?? '';
+            $uid = $params['inline_uid'] ?? 0;
 
-            if ($uid && $table) {
+            if ($uid && $table && $field) {
                 $record = BackendUtility::getRecord($table, $uid);
 
                 if ($record) {
                     $this->record = $record;
-                    $this->record['_table'] = $table;
+                    $this->inlineTable = $table;
+                    $this->inlineField = $field;
+                    $this->inlineUid = (int)$uid;
                 }
             }
         }
@@ -274,18 +232,17 @@ class InlinePageLayoutController extends PageLayoutController
      */
     protected function generateInlineHint(): array
     {
-        $record = $this->getRecord();
         $params = [
             'edit' => [
-                $record['_table'] => [
-                    $record['uid'] => 'edit',
+                $this->inlineTable => [
+                    $this->inlineUid => 'edit',
                 ],
             ],
         ];
 
         $url = (string)$this->uriBuilder->buildUriFromRoute('record_edit', $params);
         $title = $this->getRecordTitle();
-        $type = $this->getLanguageService()->sL($GLOBALS['TCA'][$record['_table']]['ctrl']['title']);
+        $type = $this->getLanguageService()->sL($GLOBALS['TCA'][$this->inlineTable]['ctrl']['title']);
         $label = $this->getLanguageService()->sL('LLL:EXT:inline_page_module/Resources/Private/Language/locallang_be.xlf:btn.back');
 
         $message = '<a href="'
@@ -295,10 +252,8 @@ class InlinePageLayoutController extends PageLayoutController
             . '</a>';
 
         return [
-            [
-                'message' => $message,
-                'state'   => InfoboxViewHelper::STATE_NOTICE,
-            ],
+            'message' => $message,
+            'state'   => ContextualFeedbackSeverity::NOTICE,
         ];
     }
 
@@ -311,6 +266,6 @@ class InlinePageLayoutController extends PageLayoutController
     {
         $record = $this->getRecord();
 
-        return BackendUtility::getRecordTitle($record['_table'], $record);
+        return BackendUtility::getRecordTitle($this->inlineTable, $record);
     }
 }

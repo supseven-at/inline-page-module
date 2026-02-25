@@ -11,8 +11,12 @@ fix: vendor/autoload.php
 
 .PHONY: lint
 lint: vendor/autoload.php
-	php vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --diff --dry-run
+	php vendor/bin/php-cs-fixer check --config=.php-cs-fixer.php --diff
 
 vendor/autoload.php: composer.json composer.lock
 	composer install --prefer-dist --no-scripts --no-plugins
 	touch vendor/autoload.php
+
+.PHONY: clean
+clean:
+	rm -rf vendor .php-cs-fixer.cache

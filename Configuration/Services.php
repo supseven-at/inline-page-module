@@ -6,13 +6,11 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
 use Psr\Http\Message\ServerRequestInterface;
 use Supseven\InlinePageModule\DependencyFactory;
-use Supseven\InlinePageModule\InlineBackendLayoutView;
 use Supseven\InlinePageModule\InlinePageLayoutController;
 use Supseven\InlinePageModule\Listeners\PageLayoutContentModifierListener;
 use Supseven\InlinePageModule\PageModuleSwitcher;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use TYPO3\CMS\Backend\Controller\PageLayoutController;
-use TYPO3\CMS\Backend\View\BackendLayoutView;
 use TYPO3\CMS\Core\Localization\LanguageService;
 
 return static function (ContainerConfigurator $container, ContainerBuilder $containerBuilder): void {
@@ -23,11 +21,9 @@ return static function (ContainerConfigurator $container, ContainerBuilder $cont
 
     $services->set(PageLayoutContentModifierListener::class);
     $services->set(DependencyFactory::class);
-    $services->set(InlineBackendLayoutView::class);
     $services->set(InlinePageLayoutController::class);
     $services->set(PageModuleSwitcher::class);
 
-    $services->alias(BackendLayoutView::class, InlineBackendLayoutView::class);
     $services->alias(PageLayoutController::class, InlinePageLayoutController::class);
 
     $services->set('typo3.request', ServerRequestInterface::class)

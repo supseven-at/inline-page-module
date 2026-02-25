@@ -125,7 +125,7 @@ class PageModuleSwitcher
             }
 
             $uri = (string)$this->uriBuilder->buildUriFromRoute('web_layout', $params);
-            $html = '<a class="btn btn-default mt-3" href="' . htmlspecialchars($uri) . '">' . $icon . ' ' . $label . '</a>';
+            $html = '<a class="btn btn-default" href="' . htmlspecialchars($uri) . '">' . $icon . ' ' . $label . '</a>';
         }
 
         return $html;
