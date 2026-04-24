@@ -26,6 +26,7 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Domain\Repository\PageRepository;
 use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Page\PageRenderer;
+use TYPO3\CMS\Core\Schema\SchemaLabelResolver;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 use TYPO3\CMS\Core\Type\ContextualFeedbackSeverity;
 
@@ -51,22 +52,40 @@ class InlinePageLayoutController extends PageLayoutController
     protected int $inlineUid = 0;
 
     public function __construct(
-        protected readonly ComponentFactory $componentFactory,
-        protected readonly IconFactory $iconFactory,
-        protected readonly PageRenderer $pageRenderer,
-        protected readonly UriBuilder $uriBuilder,
-        protected readonly PageRepository $pageRepository,
-        protected readonly ModuleTemplateFactory $moduleTemplateFactory,
-        protected readonly EventDispatcherInterface $eventDispatcher,
-        protected readonly ModuleProvider $moduleProvider,
-        protected readonly BackendLayoutRenderer $backendLayoutRenderer,
-        protected readonly BackendLayoutView $backendLayoutView,
-        protected readonly TcaSchemaFactory $tcaSchemaFactory,
-        protected readonly ConnectionPool $connectionPool,
-        protected readonly LanguageSelectorBuilder $languageSelectorBuilder,
-        protected readonly PageLinkMessageProvider $pageLinkMessageProvider,
+        ComponentFactory $componentFactory,
+        IconFactory $iconFactory,
+        PageRenderer $pageRenderer,
+        UriBuilder $uriBuilder,
+        PageRepository $pageRepository,
+        ModuleTemplateFactory $moduleTemplateFactory,
+        EventDispatcherInterface $eventDispatcher,
+        ModuleProvider $moduleProvider,
+        BackendLayoutRenderer $backendLayoutRenderer,
+        BackendLayoutView $backendLayoutView,
+        TcaSchemaFactory $tcaSchemaFactory,
+        ConnectionPool $connectionPool,
+        LanguageSelectorBuilder $languageSelectorBuilder,
+        PageLinkMessageProvider $pageLinkMessageProvider,
         protected readonly DataProviderCollection $dataProviderCollection,
+        SchemaLabelResolver $schemaLabelResolver,
     ) {
+        parent::__construct(
+            $componentFactory,
+            $iconFactory,
+            $pageRenderer,
+            $uriBuilder,
+            $pageRepository,
+            $moduleTemplateFactory,
+            $eventDispatcher,
+            $moduleProvider,
+            $backendLayoutRenderer,
+            $backendLayoutView,
+            $tcaSchemaFactory,
+            $connectionPool,
+            $languageSelectorBuilder,
+            $pageLinkMessageProvider,
+            $schemaLabelResolver,
+        );
     }
 
     protected function createPageLayoutContext(ServerRequestInterface $request): PageLayoutContext
