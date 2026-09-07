@@ -26,7 +26,7 @@ class ModifyDatabaseQueryForContentListener
 
     public function __construct(
         #[Autowire(service: 'typo3.request')]
-        protected readonly ServerRequestInterface $request,
+        protected readonly ?ServerRequestInterface $request,
         protected readonly ConnectionPool $connectionPool,
         protected readonly ExtensionConfiguration $extensionConfiguration,
     ) {
@@ -34,6 +34,10 @@ class ModifyDatabaseQueryForContentListener
 
     public function __invoke(ModifyDatabaseQueryForContentEvent $event): void
     {
+        if (!$this->request) {
+            return;
+        }
+
         $params = $this->request->getQueryParams();
         $pageId = (int)($params['id'] ?? 0);
         $result = [];

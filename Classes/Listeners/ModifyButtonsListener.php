@@ -20,12 +20,16 @@ class ModifyButtonsListener
 {
     public function __construct(
         #[Autowire(service: 'typo3.request')]
-        protected readonly ServerRequestInterface $request,
+        protected readonly ?ServerRequestInterface $request = null,
     ) {
     }
 
     public function __invoke(ModifyButtonBarEvent $event): void
     {
+        if (!$this->request) {
+            return;
+        }
+
         $params = $this->request->getQueryParams();
         $table = $params['inline_table'] ?? '';
         $uid = $params['inline_uid'] ?? 0;

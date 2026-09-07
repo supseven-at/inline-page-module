@@ -20,9 +20,9 @@ class DependencyFactory
     ) {
     }
 
-    public function getRequest(): ServerRequestInterface
+    public function getRequest(): ?ServerRequestInterface
     {
-        return $GLOBALS['TYPO3_REQUEST'];
+        return $GLOBALS['TYPO3_REQUEST'] ?? null;
     }
 
     public function getLanguageService(): LanguageService
